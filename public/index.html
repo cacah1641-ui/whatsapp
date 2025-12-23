@@ -27,7 +27,7 @@
         /* Emoji Picker */
         #emoji-picker { display: none; background: white; border-top: 1px solid #ddd; padding: 10px; grid-template-columns: repeat(8, 1fr); gap: 5px; max-height: 150px; overflow-y: auto; }
         .emoji-item { font-size: 24px; cursor: pointer; text-align: center; padding: 5px; }
-        .emoji-item:hover { background: #f0f0f0; border-radius: 5px; }
+        .emoji-item:hover { background: #f0f0f0; border-radius: 50%; }
 
         /* Preview Photo */
         #preview-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; }
@@ -38,7 +38,10 @@
         #input-area { background: #f0f0f0; padding: 8px; display: flex; align-items: center; gap: 8px; position: relative; }
         .input-wrapper { background: white; flex: 1; border-radius: 25px; display: flex; align-items: center; padding: 0 12px; }
         #msg-input { flex: 1; border: none; outline: none; padding: 10px; font-size: 16px; }
-        .circle-btn { width: 45px; height: 45px; background: var(--wa-teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; cursor: pointer; font-size: 20px; flex-shrink: 0; }
+        .circle-btn { width: 45px; height: 45px; background: var(--wa-teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; cursor: pointer; font-size: 20px; flex-shrink: 0; transition: background 0.3s; }
+        
+        /* Icon Sizing */
+        .circle-btn svg { width: 24px; height: 24px; fill: white; }
     </style>
 </head>
 <body>
@@ -71,10 +74,14 @@
         <div class="input-wrapper">
             <button onclick="toggleEmoji()" style="background:none; border:none; font-size:20px; cursor:pointer;">😊</button>
             <input type="text" id="msg-input" placeholder="Ketik pesan..." autocomplete="off">
-            <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:20px;">📷</button>
+            <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:20px; cursor:pointer;">📷</button>
             <input type="file" id="file-input" accept="image/*" style="display:none">
         </div>
-        <button id="mic-btn" class="circle-btn" onclick="handleVoiceNote()">📞</button>
+        
+        <button id="mic-btn" class="circle-btn" onclick="handleVoiceNote()">
+            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </button>
+        
         <button id="send-btn" class="circle-btn" onclick="handleSend()" style="display:none">➤</button>
     </div>
 
@@ -159,9 +166,17 @@
                     mediaRecorder = new MediaRecorder(s); audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                     mediaRecorder.onstop = () => { const b = new Blob(audioChunks, { type: 'audio/webm' }); const r = new FileReader(); r.readAsDataURL(b); r.onloadend = () => sendData(null, null, r.result); };
-                    mediaRecorder.start(); isRecording = true; btn.innerHTML = "⏺"; btn.style.background = "red";
+                    mediaRecorder.start(); isRecording = true; 
+                    btn.innerHTML = '⏺'; // Indikator merekam
+                    btn.style.background = "red";
                 } catch(e) { alert("Mic ditolak!"); }
-            } else { mediaRecorder.stop(); isRecording = false; btn.innerHTML = "📞"; btn.style.background = "var(--wa-teal-light)"; }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                // Kembalikan ke Ikon Mic SVG
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
+                btn.style.background = "var(--wa-teal-light)";
+            }
         }
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleSend(); });
     </script>
