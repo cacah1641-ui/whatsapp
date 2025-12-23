@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Clone</title>
+    <title>WhatsApp Clone Private</title>
     <style>
         :root {
             --wa-teal: #075e54;
@@ -17,25 +17,22 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
         body { margin: 0; background: var(--wa-bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* Login Overlay */
+        /* Overlay Password */
         #password-overlay { position: fixed; inset: 0; background: white; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
         /* Header */
-        header { background: var(--wa-teal); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 100; }
+        header { background: var(--wa-teal); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .user-info b { font-size: 17px; display: block; }
         .user-info span { font-size: 12px; opacity: 0.9; }
 
-        /* Chat Area */
-        #chat-container { flex: 1; overflow-y: auto; padding: 15px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); display: flex; flex-direction: column; gap: 4px; }
+        /* Chat Container */
+        #chat-container { flex: 1; overflow-y: auto; padding: 15px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); display: flex; flex-direction: column; gap: 5px; }
 
-        /* Bubble Messages */
-        .message { max-width: 85%; padding: 6px 8px 8px; border-radius: 8px; position: relative; font-size: 14.5px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        /* Message Bubbles */
+        .message { max-width: 85%; padding: 6px 8px 8px; border-radius: 8px; position: relative; font-size: 14.5px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
         .sent { align-self: flex-end; background: var(--wa-sent); border-top-right-radius: 0; }
         .received { align-self: flex-start; background: var(--wa-received); border-top-left-radius: 0; }
-
-        /* Media in Chat */
         .message img { max-width: 280px; width: 100%; border-radius: 6px; display: block; margin-bottom: 4px; }
-        audio { width: 220px; height: 35px; }
 
         .msg-footer { display: flex; justify-content: flex-end; font-size: 11px; color: rgba(0,0,0,0.4); margin-top: 2px; }
         .sent .msg-footer span { color: var(--wa-accent); margin-left: 3px; font-weight: bold; }
@@ -47,29 +44,32 @@
         
         .circle-btn { width: 45px; height: 45px; background: var(--wa-teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; cursor: pointer; font-size: 20px; flex-shrink: 0; }
 
-        /* Photo Preview Overlay (PENTING) */
+        /* FIXED PREVIEW OVERLAY (Gbr tidak pecah & pas di layar) */
         #preview-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; }
-        .preview-header { padding: 15px; display: flex; align-items: center; }
-        #preview-img { flex: 1; object-fit: contain; width: 100%; }
-        .preview-footer { padding: 15px; background: rgba(0,0,0,0.5); display: flex; gap: 10px; }
-        #caption-input { flex: 1; background: #333; border: none; border-radius: 25px; padding: 12px 18px; color: white; outline: none; }
+        .preview-header { padding: 15px; display: flex; align-items: center; color: white; }
+        .preview-body { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000; }
+        #preview-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .preview-footer { padding: 15px; background: rgba(0,0,0,0.8); display: flex; gap: 10px; align-items: center; }
+        #caption-input { flex: 1; background: #2a2f32; border: none; border-radius: 25px; padding: 12px 18px; color: white; outline: none; }
     </style>
 </head>
 <body>
 
     <div id="password-overlay">
         <h2 style="color:var(--wa-teal)">WhatsApp Private</h2>
-        <input type="password" id="pass-input" placeholder="Password" style="padding:12px; border:1px solid #ccc; border-radius:8px; width:200px; text-align:center;">
+        <input type="password" id="pass-input" placeholder="Password" style="padding:12px; border:1px solid #ccc; border-radius:8px; text-align:center;">
         <br>
         <button onclick="checkPassword()" class="circle-btn" style="width:120px; border-radius:25px; font-size:16px;">MASUK</button>
     </div>
 
     <div id="preview-overlay">
         <div class="preview-header">
-            <button onclick="cancelPreview()" style="background:none; border:none; color:white; font-size:24px;">✕</button>
-            <span style="color:white; margin-left:20px;">Preview Foto</span>
+            <button onclick="cancelPreview()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">✕</button>
+            <span style="margin-left:20px;">Kirim Foto</span>
         </div>
-        <img id="preview-img" src="">
+        <div class="preview-body">
+            <img id="preview-img" src="">
+        </div>
         <div class="preview-footer">
             <input type="text" id="caption-input" placeholder="Tambah keterangan...">
             <button class="circle-btn" onclick="confirmSendImage()">➤</button>
@@ -81,7 +81,7 @@
             <b id="room-name">Memuat...</b>
             <span id="status-label">Menghubungkan...</span>
         </div>
-        <button onclick="clearChat()" style="background:none; border:none; color:white; font-size:12px; font-weight:bold;">HAPUS CHAT</button>
+        <button onclick="clearChat()" style="background:none; border:none; color:white; font-size:12px; font-weight:bold; cursor:pointer;">HAPUS CHAT</button>
     </header>
 
     <div id="chat-container"></div>
@@ -107,7 +107,7 @@
         let isRecording = false;
         let mediaRecorder, audioChunks = [];
 
-        // Login Logic
+        // Login Session
         if (sessionStorage.getItem('isLoggedIn') === 'true') {
             document.getElementById('password-overlay').style.display = 'none';
             initApp();
@@ -121,13 +121,19 @@
             } else { alert("Password Salah!"); }
         }
 
-        // --- Fitur Kompresi & Preview (SOLUSI ANDA) ---
+        // Logic Input Teks
+        document.getElementById('msg-input').addEventListener('input', (e) => {
+            const hasText = e.target.value.trim().length > 0;
+            document.getElementById('mic-btn').style.display = hasText ? 'none' : 'flex';
+            document.getElementById('send-btn').style.display = hasText ? 'flex' : 'none';
+        });
+
+        // Pilih Foto & Kompres Otomatis
         document.getElementById('file-input').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = async (ev) => {
-                // Langsung kompres gambar saat dipilih
                 selectedFileBase64 = await compressImage(ev.target.result);
                 document.getElementById('preview-img').src = selectedFileBase64;
                 document.getElementById('preview-overlay').style.display = 'flex';
@@ -141,7 +147,7 @@
                 img.src = base64Str;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 800; // Ukuran maksimal foto (seperti WA)
+                    const MAX_SIZE = 800; 
                     let width = img.width;
                     let height = img.height;
                     if (width > height) {
@@ -152,7 +158,7 @@
                     canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7)); // Kualitas 70%
+                    resolve(canvas.toDataURL('image/jpeg', 0.7)); 
                 };
             });
         }
@@ -169,13 +175,6 @@
             document.getElementById('caption-input').value = '';
             cancelPreview();
         }
-
-        // --- Logic Dasar Chat ---
-        document.getElementById('msg-input').addEventListener('input', (e) => {
-            const hasText = e.target.value.trim().length > 0;
-            document.getElementById('mic-btn').style.display = hasText ? 'none' : 'flex';
-            document.getElementById('send-btn').style.display = hasText ? 'flex' : 'none';
-        });
 
         async function handleSend() {
             const input = document.getElementById('msg-input');
@@ -216,32 +215,6 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // Voice Note Logic (Panggil)
-        async function handleVoiceNote() {
-            const btn = document.getElementById('mic-btn');
-            if (!isRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
-                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.readAsDataURL(blob);
-                        reader.onloadend = () => sendData(null, null, reader.result);
-                    };
-                    mediaRecorder.start();
-                    isRecording = true;
-                    btn.innerHTML = "⏺"; btn.style.background = "red";
-                } catch(e) { alert("Mic ditolak!"); }
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                btn.innerHTML = "📞"; btn.style.background = "var(--wa-teal-light)";
-            }
-        }
-
         async function fetchMessages() {
             const res = await fetch(`/api/messages?room=${room}`);
             const data = await res.json();
@@ -266,10 +239,36 @@
         }
 
         async function clearChat() {
-            if (confirm("Hapus semua chat secara permanen?")) {
+            if (confirm("Hapus semua chat?")) {
                 await fetch(`/api/messages?room=${room}`, { method: 'DELETE' });
                 document.getElementById('chat-container').innerHTML = '';
                 renderedIds.clear();
+            }
+        }
+
+        // Voice Note (Panggil)
+        async function handleVoiceNote() {
+            const btn = document.getElementById('mic-btn');
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = () => sendData(null, null, reader.result);
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.innerHTML = "⏺"; btn.style.background = "red";
+                } catch(e) { alert("Mic ditolak!"); }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                btn.innerHTML = "📞"; btn.style.background = "var(--wa-teal-light)";
             }
         }
 
