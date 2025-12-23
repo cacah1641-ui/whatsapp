@@ -1,41 +1,47 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+const fs = require('fs');
 
-// PENTING: Naikkan limit ke 50mb agar bisa kirim gambar & audio base64
+const DB_FILE = './messages.json';
+
+function loadMessages() {
+    try {
+        if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    } catch (e) { console.error("Gagal load chat"); }
+    return [];
+}
+
+function saveMessages(data) {
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    } catch (e) { console.error("Gagal save chat"); }
+}
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-let messages = [];
+let messages = loadMessages();
 let onlineUsers = {}; 
 
-// API Ambil Pesan
 app.get('/api/messages', (req, res) => {
     const room = req.query.room || 'Utama';
     res.json(messages.filter(m => m.room === room));
 });
 
-// API Kirim Pesan (Mendukung Text, Image, Audio, dan Reply)
 app.post('/api/messages', (req, res) => {
     const { room, text, image, audio, senderId, reply } = req.body;
-    
     const newMessage = {
         room: room || 'Utama',
-        text,
-        image,  
-        audio,  
-        senderId,
-        reply, // Data balasan pesan
+        text, image, audio, senderId, reply,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-
     messages.push(newMessage);
-    if (messages.length > 200) messages.shift(); // Batasi 200 pesan di memori
-    
+    if (messages.length > 500) messages.shift();
+    saveMessages(messages);
     res.status(201).json({ status: 'OK' });
 });
 
-// API Status Online
 app.post('/api/heartbeat', (req, res) => {
     const { userId, room } = req.body;
     onlineUsers[userId] = { room, lastSeen: Date.now() };
@@ -44,14 +50,12 @@ app.post('/api/heartbeat', (req, res) => {
     res.json({ onlineCount: count });
 });
 
-// API Hapus Chat
 app.delete('/api/messages', (req, res) => {
     const room = req.query.room;
     messages = messages.filter(m => m.room !== room);
+    saveMessages(messages);
     res.json({ status: 'Deleted' });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
