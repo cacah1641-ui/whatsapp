@@ -8,14 +8,14 @@ const DB_FILE = './messages.json';
 function loadMessages() {
     try {
         if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    } catch (e) { console.log("Database baru..."); }
+    } catch (e) { console.log("Database baru dibuat."); }
     return [];
 }
 
 function saveMessages(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    } catch (e) { console.error("Gagal simpan!"); }
+    } catch (e) { console.error("Gagal menyimpan ke file!"); }
 }
 
 app.use(express.json({ limit: '50mb' }));
@@ -30,9 +30,9 @@ app.get('/api/messages', (req, res) => {
 });
 
 app.post('/api/messages', (req, res) => {
-    const { room, text, image, audio, senderId, reply } = req.body;
+    const { room, text, image, audio, senderId } = req.body;
     const newMessage = {
-        room: room || 'Utama', text, image, audio, senderId, reply,
+        room: room || 'Utama', text, image, audio, senderId,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     messages.push(newMessage);
@@ -49,10 +49,11 @@ app.post('/api/heartbeat', (req, res) => {
 });
 
 app.delete('/api/messages', (req, res) => {
-    messages = messages.filter(m => m.room !== req.query.room);
+    const room = req.query.room;
+    messages = messages.filter(m => m.room !== room);
     saveMessages(messages);
     res.json({ status: 'Deleted' });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server aktif di port ${PORT}`));
+app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));
