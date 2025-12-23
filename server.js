@@ -5,22 +5,22 @@ const fs = require('fs');
 
 const DB_FILE = './messages.json';
 
-// Fungsi memuat pesan dari file agar tidak hilang saat restart
+// Memuat pesan dari file agar tidak hilang saat restart
 function loadMessages() {
     try {
         if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    } catch (e) { console.error("Gagal muat chat"); }
+    } catch (e) { console.error("Gagal muat database"); }
     return [];
 }
 
-// Fungsi menyimpan pesan ke file
+// Menyimpan pesan ke file JSON
 function saveMessages(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    } catch (e) { console.error("Gagal simpan chat"); }
+    } catch (e) { console.error("Gagal simpan database"); }
 }
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '50mb' })); // Limit aman untuk base64
 app.use(express.static(path.join(__dirname, 'public')));
 
 let messages = loadMessages();
@@ -48,9 +48,7 @@ app.post('/api/heartbeat', (req, res) => {
     const { userId, room } = req.body;
     onlineUsers[userId] = { room, lastSeen: Date.now() };
     const now = Date.now();
-    const count = Object.values(onlineUsers).filter(u => 
-        u.room === room && (now - u.lastSeen) < 10000
-    ).length;
+    const count = Object.values(onlineUsers).filter(u => u.room === room && (now - u.lastSeen) < 10000).length;
     res.json({ onlineCount: count });
 });
 
