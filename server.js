@@ -8,10 +8,8 @@ const DB_FILE = './messages.json';
 // Load pesan dari memori permanen
 function loadMessages() {
     try {
-        if (fs.existsSync(DB_FILE)) {
-            return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        }
-    } catch (e) { console.error("Database baru dibuat."); }
+        if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    } catch (e) { console.log("Memulai database baru..."); }
     return [];
 }
 
@@ -19,7 +17,7 @@ function loadMessages() {
 function saveMessages(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    } catch (e) { console.error("Gagal menyimpan!"); }
+    } catch (e) { console.error("Gagal simpan ke memori!"); }
 }
 
 app.use(express.json({ limit: '50mb' }));
@@ -50,9 +48,7 @@ app.post('/api/heartbeat', (req, res) => {
     const { userId, room } = req.body;
     onlineUsers[userId] = { room, lastSeen: Date.now() };
     const now = Date.now();
-    const count = Object.values(onlineUsers).filter(u => 
-        u.room === room && (now - u.lastSeen) < 10000
-    ).length;
+    const count = Object.values(onlineUsers).filter(u => u.room === room && (now - u.lastSeen) < 10000).length;
     res.json({ onlineCount: count });
 });
 
@@ -64,4 +60,4 @@ app.delete('/api/messages', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server aktif di http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server aktif di port ${PORT}`));
