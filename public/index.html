@@ -3,95 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Clone Speed</title>
+    <title>WhatsApp Speed + Emoji</title>
     <style>
-        :root {
-            --wa-teal: #075e54;
-            --wa-teal-light: #128c7e;
-            --wa-bg: #e5ddd5;
-            --wa-sent: #dcf8c6;
-            --wa-received: #ffffff;
-            --wa-accent: #34b7f1;
-        }
-
-        * { box-sizing: border-box; font-family: 'Segoe UI', Helvetica, sans-serif; }
+        :root { --wa-teal: #075e54; --wa-teal-light: #128c7e; --wa-bg: #e5ddd5; --wa-sent: #dcf8c6; --wa-received: #ffffff; --wa-accent: #34b7f1; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
         body { margin: 0; background: var(--wa-bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* Overlay Password */
+        /* Password & Header */
         #password-overlay { position: fixed; inset: 0; background: white; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-
-        /* Header */
-        header { background: var(--wa-teal); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        header { background: var(--wa-teal); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 100; }
         .user-info b { font-size: 17px; display: block; }
         .user-info span { font-size: 12px; opacity: 0.9; }
 
-        /* Chat Container */
+        /* Chat */
         #chat-container { flex: 1; overflow-y: auto; padding: 15px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); display: flex; flex-direction: column; gap: 5px; }
-
-        /* Bubbles */
         .message { max-width: 85%; padding: 6px 8px 8px; border-radius: 8px; position: relative; font-size: 14.5px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
         .sent { align-self: flex-end; background: var(--wa-sent); border-top-right-radius: 0; }
         .received { align-self: flex-start; background: var(--wa-received); border-top-left-radius: 0; }
         .message img { max-width: 280px; width: 100%; border-radius: 6px; display: block; margin-bottom: 4px; }
-
         .msg-footer { display: flex; justify-content: flex-end; font-size: 11px; color: rgba(0,0,0,0.4); margin-top: 2px; }
         .sent .msg-footer span { color: var(--wa-accent); margin-left: 3px; font-weight: bold; }
 
+        /* Emoji Picker */
+        #emoji-picker { display: none; background: white; border-top: 1px solid #ddd; padding: 10px; grid-template-columns: repeat(8, 1fr); gap: 5px; max-height: 150px; overflow-y: auto; }
+        .emoji-item { font-size: 24px; cursor: pointer; text-align: center; padding: 5px; }
+        .emoji-item:hover { background: #f0f0f0; border-radius: 5px; }
+
+        /* Preview Photo */
+        #preview-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; }
+        .preview-body { flex: 1; display: flex; align-items: center; justify-content: center; }
+        #preview-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
         /* Input Area */
-        #input-area { background: #f0f0f0; padding: 8px; display: flex; align-items: center; gap: 8px; }
+        #input-area { background: #f0f0f0; padding: 8px; display: flex; align-items: center; gap: 8px; position: relative; }
         .input-wrapper { background: white; flex: 1; border-radius: 25px; display: flex; align-items: center; padding: 0 12px; }
         #msg-input { flex: 1; border: none; outline: none; padding: 10px; font-size: 16px; }
-        
         .circle-btn { width: 45px; height: 45px; background: var(--wa-teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; cursor: pointer; font-size: 20px; flex-shrink: 0; }
-        .circle-btn:disabled { background: #ccc; cursor: not-allowed; }
-
-        /* Preview Overlay Optimized */
-        #preview-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; }
-        .preview-header { padding: 15px; display: flex; align-items: center; color: white; }
-        .preview-body { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #preview-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .preview-footer { padding: 15px; background: rgba(0,0,0,0.8); display: flex; gap: 10px; align-items: center; }
-        #caption-input { flex: 1; background: #2a2f32; border: none; border-radius: 25px; padding: 12px 18px; color: white; outline: none; }
     </style>
 </head>
 <body>
 
     <div id="password-overlay">
-        <h2 style="color:var(--wa-teal)">WhatsApp Private</h2>
-        <input type="password" id="pass-input" placeholder="Password" style="padding:12px; border:1px solid #ccc; border-radius:8px; text-align:center;">
-        <br>
-        <button onclick="checkPassword()" class="circle-btn" style="width:120px; border-radius:25px; font-size:16px;">MASUK</button>
+        <h2>WhatsApp Private</h2>
+        <input type="password" id="pass-input" placeholder="Password" style="padding:10px; border-radius:5px; text-align:center;">
+        <br><button onclick="checkPassword()" class="circle-btn" style="width:100px; border-radius:20px; font-size:14px;">MASUK</button>
     </div>
 
     <div id="preview-overlay">
-        <div class="preview-header">
-            <button onclick="cancelPreview()" style="background:none; border:none; color:white; font-size:24px;">✕</button>
-            <span style="margin-left:20px;">Preview Foto</span>
-        </div>
-        <div class="preview-body">
-            <img id="preview-img" src="">
-        </div>
-        <div class="preview-footer">
-            <input type="text" id="caption-input" placeholder="Tambah keterangan...">
-            <button id="preview-send-btn" class="circle-btn" onclick="confirmSendImage()">➤</button>
+        <div style="padding:15px; color:white;"><button onclick="cancelPreview()" style="background:none; border:none; color:white; font-size:24px;">✕</button></div>
+        <div class="preview-body"><img id="preview-img" src=""></div>
+        <div style="padding:15px; background:rgba(0,0,0,0.5); display:flex; gap:10px;">
+            <input type="text" id="caption-input" placeholder="Keterangan..." style="flex:1; padding:12px; border-radius:25px; border:none;">
+            <button class="circle-btn" onclick="confirmSendImage()">➤</button>
         </div>
     </div>
 
     <header>
-        <div class="user-info">
-            <b id="room-name">Memuat...</b>
-            <span id="status-label">Menghubungkan...</span>
-        </div>
+        <div class="user-info"><b id="room-name">...</b><span id="status-label">...</span></div>
         <button onclick="clearChat()" style="background:none; border:none; color:white; font-size:12px; font-weight:bold;">HAPUS CHAT</button>
     </header>
 
     <div id="chat-container"></div>
 
+    <div id="emoji-picker"></div>
+
     <div id="input-area">
         <div class="input-wrapper">
+            <button onclick="toggleEmoji()" style="background:none; border:none; font-size:20px; cursor:pointer;">😊</button>
+            <input type="text" id="msg-input" placeholder="Ketik pesan..." autocomplete="off">
             <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:20px;">📷</button>
             <input type="file" id="file-input" accept="image/*" style="display:none">
-            <input type="text" id="msg-input" placeholder="Ketik pesan..." autocomplete="off">
         </div>
         <button id="mic-btn" class="circle-btn" onclick="handleVoiceNote()">📞</button>
         <button id="send-btn" class="circle-btn" onclick="handleSend()" style="display:none">➤</button>
@@ -99,27 +80,24 @@
 
     <script>
         const PASS = "*123#";
-        const urlParams = new URLSearchParams(window.location.search);
-        const room = urlParams.get('room') || 'Utama';
+        const room = new URLSearchParams(window.location.search).get('room') || 'Utama';
         const myId = 'user_' + Math.random().toString(36).substr(2, 5);
+        let renderedIds = new Set(), selectedFileBase64 = null, isRecording = false, mediaRecorder, audioChunks = [];
 
-        let renderedIds = new Set();
-        let selectedFileBase64 = null;
-        let isRecording = false;
-        let mediaRecorder, audioChunks = [];
+        // DAFTAR EMOJI
+        const emojis = ["😊","😂","😍","🥰","😘","😜","🤔","🙄","😭","😡","👍","👎","❤️","🔥","🙏","👏","😂","🤣","😅","😆","😉","😊","😋","😎","😍","😘","🥰","😗","😙","😚","☺️","🙂","🤗","🤩"];
+        const picker = document.getElementById('emoji-picker');
+        emojis.forEach(e => {
+            const span = document.createElement('span');
+            span.className = 'emoji-item'; span.innerText = e;
+            span.onclick = () => { document.getElementById('msg-input').value += e; document.getElementById('msg-input').dispatchEvent(new Event('input')); };
+            picker.appendChild(span);
+        });
 
-        if (sessionStorage.getItem('isLoggedIn') === 'true') {
-            document.getElementById('password-overlay').style.display = 'none';
-            initApp();
-        }
+        function toggleEmoji() { picker.style.display = (picker.style.display === 'grid') ? 'none' : 'grid'; }
 
-        function checkPassword() {
-            if (document.getElementById('pass-input').value === PASS) {
-                sessionStorage.setItem('isLoggedIn', 'true');
-                document.getElementById('password-overlay').style.display = 'none';
-                initApp();
-            } else { alert("Password Salah!"); }
-        }
+        if (sessionStorage.getItem('isLoggedIn') === 'true') { document.getElementById('password-overlay').style.display = 'none'; initApp(); }
+        function checkPassword() { if (document.getElementById('pass-input').value === PASS) { sessionStorage.setItem('isLoggedIn', 'true'); document.getElementById('password-overlay').style.display = 'none'; initApp(); } else { alert("Salah!"); } }
 
         document.getElementById('msg-input').addEventListener('input', (e) => {
             const hasText = e.target.value.trim().length > 0;
@@ -127,164 +105,64 @@
             document.getElementById('send-btn').style.display = hasText ? 'flex' : 'none';
         });
 
-        // KOMPRESI AGRESIF UNTUK KECEPATAN
         async function compressImage(base64Str) {
             return new Promise((resolve) => {
-                const img = new Image();
-                img.src = base64Str;
+                const img = new Image(); img.src = base64Str;
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 600; // Ukuran diperkecil agar sangat ringan
-                    let width = img.width;
-                    let height = img.height;
-                    if (width > height) {
-                        if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-                    } else {
-                        if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-                    }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.5)); // Kualitas 50%
+                    const canvas = document.createElement('canvas'); const MAX = 600;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.5));
                 };
             });
         }
 
-        document.getElementById('file-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
-            reader.onload = async (ev) => {
-                selectedFileBase64 = await compressImage(ev.target.result);
-                document.getElementById('preview-img').src = selectedFileBase64;
-                document.getElementById('preview-overlay').style.display = 'flex';
-            };
+            reader.onload = async (ev) => { selectedFileBase64 = await compressImage(ev.target.result); document.getElementById('preview-img').src = selectedFileBase64; document.getElementById('preview-overlay').style.display = 'flex'; };
             reader.readAsDataURL(file);
         });
 
-        function cancelPreview() {
-            document.getElementById('preview-overlay').style.display = 'none';
-            document.getElementById('file-input').value = '';
-            selectedFileBase64 = null;
-        }
-
-        async function confirmSendImage() {
-            const btn = document.getElementById('preview-send-btn');
-            btn.innerHTML = "⏳"; btn.disabled = true;
-            const caption = document.getElementById('caption-input').value;
-            await sendData(caption, selectedFileBase64, null);
-            btn.innerHTML = "➤"; btn.disabled = false;
-            document.getElementById('caption-input').value = '';
-            cancelPreview();
-        }
-
-        async function handleSend() {
-            const input = document.getElementById('msg-input');
-            const btn = document.getElementById('send-btn');
-            if (!input.value.trim()) return;
-            
-            btn.innerHTML = "⏳"; btn.disabled = true;
-            await sendData(input.value, null, null);
-            btn.innerHTML = "➤"; btn.disabled = false;
-            
-            input.value = '';
-            document.getElementById('mic-btn').style.display = 'flex';
-            document.getElementById('send-btn').style.display = 'none';
-        }
-
+        function cancelPreview() { document.getElementById('preview-overlay').style.display = 'none'; document.getElementById('file-input').value = ''; }
+        async function confirmSendImage() { await sendData(document.getElementById('caption-input').value, selectedFileBase64, null); document.getElementById('caption-input').value = ''; cancelPreview(); }
+        async function handleSend() { const input = document.getElementById('msg-input'); if (!input.value.trim()) return; await sendData(input.value, null, null); input.value = ''; document.getElementById('mic-btn').style.display = 'flex'; document.getElementById('send-btn').style.display = 'none'; picker.style.display = 'none'; }
+        
         async function sendData(text, image, audio) {
-            try {
-                await fetch('/api/messages', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ room, text, image, audio, senderId: myId })
-                });
-                fetchMessages();
-            } catch (e) { console.error("Gagal kirim"); }
+            await fetch('/api/messages', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ room, text, image, audio, senderId: myId }) });
+            fetchMessages();
         }
 
         function append(msg) {
-            const id = msg.senderId + msg.time + (msg.text || '') + (msg.image ? 'img' : '');
-            if (renderedIds.has(id)) return;
-            renderedIds.add(id);
-
+            const id = msg.senderId + msg.time + (msg.text || '') + (msg.image ? 'i' : '');
+            if (renderedIds.has(id)) return; renderedIds.add(id);
             const container = document.getElementById('chat-container');
             const isMe = msg.senderId === myId;
-            const div = document.createElement('div');
-            div.className = `message ${isMe ? 'sent' : 'received'}`;
-            
-            let html = "";
-            if (msg.image) html += `<img src="${msg.image}">`;
-            if (msg.audio) html += `<audio controls src="${msg.audio}"></audio>`;
-            if (msg.text) html += `<div>${msg.text}</div>`;
-            html += `<div class="msg-footer">${msg.time} ${isMe ? '<span>✓✓</span>' : ''}</div>`;
-            
-            div.innerHTML = html;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            const div = document.createElement('div'); div.className = `message ${isMe ? 'sent' : 'received'}`;
+            div.innerHTML = `${msg.image ? `<img src="${msg.image}">`:''}${msg.audio ? `<audio controls src="${msg.audio}"></audio>`:''}${msg.text ? `<div>${msg.text}</div>`:''}<div class="msg-footer">${msg.time} ${isMe ? '<span>✓✓</span>' : ''}</div>`;
+            container.appendChild(div); container.scrollTop = container.scrollHeight;
         }
 
-        async function fetchMessages() {
-            try {
-                const res = await fetch(`/api/messages?room=${room}`);
-                const data = await res.json();
-                data.forEach(m => append(m));
-            } catch (e) {}
-        }
+        async function fetchMessages() { try { const res = await fetch(`/api/messages?room=${room}`); const data = await res.json(); data.forEach(m => append(m)); } catch (e) {} }
+        async function updateStatus() { try { const res = await fetch('/api/heartbeat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: myId, room }) }); const data = await res.json(); document.getElementById('status-label').innerText = `${data.onlineCount} Online`; } catch (e) {} }
 
-        async function updateStatus() {
-            try {
-                const res = await fetch('/api/heartbeat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ userId: myId, room })
-                });
-                const data = await res.json();
-                document.getElementById('status-label').innerText = `${data.onlineCount} Orang Online`;
-            } catch (e) {}
-        }
-
-        function initApp() {
-            document.getElementById('room-name').innerText = room;
-            fetchMessages();
-            // SPEED OPTIMIZED: CEK SETIAP 0.5 DETIK
-            setInterval(fetchMessages, 500); 
-            setInterval(updateStatus, 5000);
-        }
-
-        async function clearChat() {
-            if (confirm("Hapus semua chat?")) {
-                await fetch(`/api/messages?room=${room}`, { method: 'DELETE' });
-                document.getElementById('chat-container').innerHTML = '';
-                renderedIds.clear();
-            }
-        }
+        function initApp() { document.getElementById('room-name').innerText = room; fetchMessages(); setInterval(fetchMessages, 500); setInterval(updateStatus, 5000); }
+        async function clearChat() { if (confirm("Hapus?")) { await fetch(`/api/messages?room=${room}`, { method: 'DELETE' }); document.getElementById('chat-container').innerHTML = ''; renderedIds.clear(); } }
 
         async function handleVoiceNote() {
             const btn = document.getElementById('mic-btn');
             if (!isRecording) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
+                    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(s); audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
-                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.readAsDataURL(blob);
-                        reader.onloadend = () => sendData(null, null, reader.result);
-                    };
-                    mediaRecorder.start();
-                    isRecording = true;
-                    btn.innerHTML = "⏺"; btn.style.background = "red";
+                    mediaRecorder.onstop = () => { const b = new Blob(audioChunks, { type: 'audio/webm' }); const r = new FileReader(); r.readAsDataURL(b); r.onloadend = () => sendData(null, null, r.result); };
+                    mediaRecorder.start(); isRecording = true; btn.innerHTML = "⏺"; btn.style.background = "red";
                 } catch(e) { alert("Mic ditolak!"); }
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                btn.innerHTML = "📞"; btn.style.background = "var(--wa-teal-light)";
-            }
+            } else { mediaRecorder.stop(); isRecording = false; btn.innerHTML = "📞"; btn.style.background = "var(--wa-teal-light)"; }
         }
-
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleSend(); });
     </script>
 </body>
