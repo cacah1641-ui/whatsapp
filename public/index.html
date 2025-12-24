@@ -146,7 +146,7 @@
 
     <script>
         /* SEMUA LOGIKA JAVASCRIPT ASLI TETAP DI SINI TANPA PERUBAHAN FITUR */
-        const PASS = "123#";
+        const PASS = "*000#";
         const room = new URLSearchParams(window.location.search).get('room') || 'Utama';
         const myId = 'user_' + Math.random().toString(36).substr(2, 5);
         let renderedIds = new Set(), selectedFileBase64 = null, isRecording = false, mediaRecorder, audioChunks = [];
@@ -240,3 +240,4 @@
     </script>
 </body>
 </html>
+
