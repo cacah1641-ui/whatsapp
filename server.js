@@ -8,18 +8,17 @@ const io = require('socket.io')(http);
 const PORT = process.env.PORT || 3000;
 const DB_FILE = './messages.json';
 
-// Fungsi Database (Simpan ke File)
 function loadMessages() {
     try {
         if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    } catch (e) { console.log("Database baru dibuat."); }
+    } catch (e) { return []; }
     return [];
 }
 
 function saveMessages(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    } catch (e) { console.error("Gagal menyimpan ke file!"); }
+    } catch (e) { console.error("Gagal simpan file"); }
 }
 
 app.use(express.json({ limit: '50mb' }));
@@ -27,18 +26,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let messages = loadMessages();
 
-// Logika Socket.io (Real-time)
 io.on('connection', (socket) => {
-    console.log('User terhubung');
-
-    socket.on('join-room', (room) => {
-        socket.join(room);
-    });
+    socket.on('join-room', (room) => socket.join(room));
 
     socket.on('send-chat', (data) => {
         const newMessage = {
             room: data.room || 'Utama',
-            text: data.text,
+            text: data.text || '',
+            image: data.image || null,
+            audio: data.audio || null,
             senderId: data.senderId,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -47,18 +43,14 @@ io.on('connection', (socket) => {
         if (messages.length > 500) messages.shift();
         saveMessages(messages);
 
-        // Kirim ke semua orang di room secara instan
+        // Kirim ke semua orang secara real-time
         io.to(data.room).emit('new-message', newMessage);
     });
 });
 
-// API untuk Load Chat Awal
 app.get('/api/messages', (req, res) => {
     const room = req.query.room || 'Utama';
     res.json(messages.filter(m => m.room === room));
 });
 
-// Jalankan Server
-http.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
