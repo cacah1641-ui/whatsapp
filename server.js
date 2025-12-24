@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
     socket.on('send-chat', (data) => {
         const newMessage = {
             room: data.room || 'Utama',
-            text: data.text || '',
+            text: data.text || null,
             image: data.image || null,
             audio: data.audio || null,
             senderId: data.senderId,
@@ -43,7 +43,7 @@ io.on('connection', (socket) => {
         if (messages.length > 500) messages.shift();
         saveMessages(messages);
 
-        // Kirim ke semua orang secara real-time
+        // Kirim ke semua orang secara instan
         io.to(data.room).emit('new-message', newMessage);
     });
 });
