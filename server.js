@@ -2,8 +2,6 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const fs = require('fs');
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = './messages.json';
@@ -11,46 +9,52 @@ const DB_FILE = './messages.json';
 function loadMessages() {
     try {
         if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    } catch (e) { return []; }
+    } catch (e) { console.log("Database baru dibuat."); }
     return [];
 }
 
 function saveMessages(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    } catch (e) { console.error("Gagal simpan file"); }
+    } catch (e) { console.error("Gagal menyimpan!"); }
 }
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 let messages = loadMessages();
-
-io.on('connection', (socket) => {
-    socket.on('join-room', (room) => socket.join(room));
-
-    socket.on('send-chat', (data) => {
-        const newMessage = {
-            room: data.room || 'Utama',
-            text: data.text || null,
-            image: data.image || null,
-            audio: data.audio || null,
-            senderId: data.senderId,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        
-        messages.push(newMessage);
-        if (messages.length > 500) messages.shift();
-        saveMessages(messages);
-
-        // Kirim ke semua orang secara instan
-        io.to(data.room).emit('new-message', newMessage);
-    });
-});
+let onlineUsers = {}; 
 
 app.get('/api/messages', (req, res) => {
     const room = req.query.room || 'Utama';
     res.json(messages.filter(m => m.room === room));
 });
 
-http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.post('/api/messages', (req, res) => {
+    const { room, text, image, audio, senderId } = req.body;
+    const newMessage = {
+        id: Date.now() + Math.random().toString(36).substr(2, 5), // ID Unik
+        room: room || 'Utama', text, image, audio, senderId,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    messages.push(newMessage);
+    if (messages.length > 500) messages.shift();
+    saveMessages(messages);
+    res.status(201).json({ status: 'OK' });
+});
+
+app.delete('/api/messages', (req, res) => {
+    const room = req.query.room || 'Utama';
+    messages = messages.filter(m => m.room !== room);
+    saveMessages(messages);
+    res.json({ status: 'Deleted' });
+});
+
+app.post('/api/heartbeat', (req, res) => {
+    const { userId, room } = req.body;
+    onlineUsers[userId] = { room, lastSeen: Date.now() };
+    const count = Object.values(onlineUsers).filter(u => u.room === room && Date.now() - u.lastSeen < 10000).length;
+    res.json({ onlineCount: count });
+});
+
+app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));
