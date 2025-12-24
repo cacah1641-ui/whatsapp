@@ -1,196 +1,65 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Clone Fixed</title>
+    <title>Chat Real-time</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root { --wa-teal: #075e54; --wa-teal-light: #128c7e; --wa-bg: #e5ddd5; --wa-sent: #dcf8c6; --wa-received: #ffffff; --wa-accent: #34b7f1; }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
-        body { margin: 0; background: var(--wa-bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-        #password-overlay { position: fixed; inset: 0; background: white; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        header { background: var(--wa-teal); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 100; }
-        
-        #chat-container { flex: 1; overflow-y: auto; padding: 15px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); display: flex; flex-direction: column; gap: 5px; }
-        .message { max-width: 85%; padding: 6px 8px 8px; border-radius: 8px; position: relative; font-size: 14.5px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
-        .sent { align-self: flex-end; background: var(--wa-sent); border-top-right-radius: 0; }
-        .received { align-self: flex-start; background: var(--wa-received); border-top-left-radius: 0; }
-        .message img { max-width: 280px; width: 100%; border-radius: 6px; display: block; margin-bottom: 4px; }
-        .msg-footer { display: flex; justify-content: flex-end; font-size: 11px; color: rgba(0,0,0,0.4); margin-top: 2px; }
-        .sent .msg-footer span { color: var(--wa-accent); margin-left: 3px; font-weight: bold; }
-
-        #emoji-picker { display: none; background: white; border-top: 1px solid #ddd; padding: 10px; grid-template-columns: repeat(8, 1fr); gap: 5px; max-height: 150px; overflow-y: auto; }
-        .emoji-item { font-size: 24px; cursor: pointer; text-align: center; padding: 5px; }
-
-        #preview-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; }
-        .preview-body { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #preview-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        #input-area { background: #f0f0f0; padding: 8px; display: flex; align-items: center; gap: 8px; position: relative; }
-        .input-wrapper { background: white; flex: 1; border-radius: 25px; display: flex; align-items: center; padding: 0 12px; }
-        #msg-input { flex: 1; border: none; outline: none; padding: 10px; font-size: 16px; }
-        .circle-btn { width: 45px; height: 45px; background: var(--wa-teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; cursor: pointer; font-size: 20px; flex-shrink: 0; }
-        .circle-btn svg { width: 24px; height: 24px; fill: white; }
+        #chat-box { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        .msg { margin-bottom: 8px; padding: 5px; background: #f1f1f1; border-radius: 5px; }
     </style>
 </head>
 <body>
-
-    <div id="password-overlay">
-        <h2>WhatsApp Private</h2>
-        <input type="password" id="pass-input" placeholder="Password" style="padding:10px; border-radius:5px; text-align:center;">
-        <br><button onclick="checkPassword()" class="circle-btn" style="width:100px; border-radius:20px; font-size:14px;">MASUK</button>
-    </div>
-
-    <div id="preview-overlay">
-        <div style="padding:15px; color:white;"><button onclick="cancelPreview()" style="background:none; border:none; color:white; font-size:24px;">✕</button></div>
-        <div class="preview-body"><img id="preview-img" src=""></div>
-        <div style="padding:15px; background:rgba(0,0,0,0.5); display:flex; gap:10px;">
-            <input type="text" id="caption-input" placeholder="Keterangan..." style="flex:1; padding:12px; border-radius:25px; border:none;">
-            <button class="circle-btn" onclick="confirmSendImage()">➤</button>
-        </div>
-    </div>
-
-    <header>
-        <div class="user-info"><b id="room-name">...</b> <span id="status-label">...</span></div>
-        <button onclick="clearChat()" style="background:none; border:none; color:white; font-size:12px; font-weight:bold; cursor:pointer;">HAPUS CHAT</button>
-    </header>
-
-    <div id="chat-container"></div>
-    <div id="emoji-picker"></div>
-
-    <div id="input-area">
-        <div class="input-wrapper">
-            <button onclick="toggleEmoji()" style="background:none; border:none; font-size:20px; cursor:pointer;">😊</button>
-            <input type="text" id="msg-input" placeholder="Ketik pesan..." autocomplete="off">
-            <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:20px; cursor:pointer;">📷</button>
-            <input type="file" id="file-input" accept="image/*" style="display:none">
-        </div>
-        <button id="mic-btn" class="circle-btn" onclick="handleVoiceNote()">
-            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        </button>
-        <button id="send-btn" class="circle-btn" onclick="handleSend()" style="display:none">➤</button>
-    </div>
+    <div id="chat-box"></div>
+    <input type="text" id="message-input" placeholder="Ketik pesan...">
+    <button onclick="sendMessage()">Kirim</button>
 
     <script>
-        const PASS = "12345";
-        const room = new URLSearchParams(window.location.search).get('room') || 'Utama';
-        const myId = 'user_' + Math.random().toString(36).substr(2, 5);
-        let renderedIds = new Set(), selectedFileBase64 = null, isRecording = false, mediaRecorder, audioChunks = [];
+        const socket = io();
+        const chatBox = document.getElementById('chat-box');
+        const roomName = 'Utama'; // Sesuai default server Anda
+        const myId = 'User_' + Math.floor(Math.random() * 1000);
 
-        // EMOJI SYSTEM
-        const emojis = ["😊","😂","😍","🥰","😘","😜","🤔","🙄","😭","😡","👍","👎","❤️","🔥","🙏","👏","😂","🤣","😅","😆","😉","😊","😋","😎","😍","😘","🥰","😗","😙","😚","☺️","🙂","🤗","🤩"];
-        const picker = document.getElementById('emoji-picker');
-        emojis.forEach(e => {
-            const span = document.createElement('span'); span.className = 'emoji-item'; span.innerText = e;
-            span.onclick = () => { document.getElementById('msg-input').value += e; document.getElementById('msg-input').dispatchEvent(new Event('input')); };
-            picker.appendChild(span);
-        });
-        function toggleEmoji() { picker.style.display = (picker.style.display === 'grid') ? 'none' : 'grid'; }
+        socket.emit('join-room', roomName);
 
-        // AUTH
-        if (sessionStorage.getItem('isLoggedIn') === 'true') { document.getElementById('password-overlay').style.display = 'none'; initApp(); }
-        function checkPassword() { if (document.getElementById('pass-input').value === PASS) { sessionStorage.setItem('isLoggedIn', 'true'); document.getElementById('password-overlay').style.display = 'none'; initApp(); } else { alert("Salah!"); } }
-
-        // INPUT LOGIC
-        document.getElementById('msg-input').addEventListener('input', (e) => {
-            const hasText = e.target.value.trim().length > 0;
-            document.getElementById('mic-btn').style.display = hasText ? 'none' : 'flex';
-            document.getElementById('send-btn').style.display = hasText ? 'flex' : 'none';
-        });
-
-        // IMAGE LOGIC (COMPRESSED)
-        async function compressImage(base64Str) {
-            return new Promise((resolve) => {
-                const img = new Image(); img.src = base64Str;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas'); const MAX = 600;
-                    let w = img.width, h = img.height;
-                    if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    resolve(canvas.toDataURL('image/jpeg', 0.5));
-                };
+        // 1. Load chat lama saat pertama kali buka (sekali saja)
+        fetch(`/api/messages?room=${roomName}`)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(msg => appendMessage(msg));
+                scrollToBottom();
             });
-        }
-        document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (ev) => { selectedFileBase64 = await compressImage(ev.target.result); document.getElementById('preview-img').src = selectedFileBase64; document.getElementById('preview-overlay').style.display = 'flex'; };
-            reader.readAsDataURL(file);
+
+        // 2. Terima pesan baru via Socket (Real-time)
+        socket.on('new-message', (msg) => {
+            appendMessage(msg);
+            scrollToBottom();
         });
 
-        function cancelPreview() { document.getElementById('preview-overlay').style.display = 'none'; document.getElementById('file-input').value = ''; }
-        async function confirmSendImage() { await sendData(document.getElementById('caption-input').value, selectedFileBase64, null); document.getElementById('caption-input').value = ''; cancelPreview(); }
-        async function handleSend() { const input = document.getElementById('msg-input'); if (!input.value.trim()) return; await sendData(input.value, null, null); input.value = ''; document.getElementById('mic-btn').style.display = 'flex'; document.getElementById('send-btn').style.display = 'none'; picker.style.display = 'none'; }
-        
-        async function sendData(text, image, audio) {
-            await fetch('/api/messages', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ room, text, image, audio, senderId: myId }) });
-            fetchMessages();
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            if(!input.value) return;
+
+            const data = {
+                room: roomName,
+                text: input.value,
+                senderId: myId
+            };
+
+            socket.emit('send-chat', data);
+            input.value = '';
         }
 
-        // FETCH & RENDER (DENGAN FIX HAPUS)
-        function append(msg) {
-            const id = msg.senderId + msg.time + (msg.text || '') + (msg.image ? 'i' : '');
-            if (renderedIds.has(id)) return; renderedIds.add(id);
-            const container = document.getElementById('chat-container');
-            const isMe = msg.senderId === myId;
-            const div = document.createElement('div'); div.className = `message ${isMe ? 'sent' : 'received'}`;
-            div.innerHTML = `${msg.image ? `<img src="${msg.image}">`:''}${msg.audio ? `<audio controls src="${msg.audio}"></audio>`:''}${msg.text ? `<div>${msg.text}</div>`:''}<div class="msg-footer">${msg.time} ${isMe ? '<span>✓✓</span>' : ''}</div>`;
-            container.appendChild(div); container.scrollTop = container.scrollHeight;
+        function appendMessage(msg) {
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.innerHTML = `<strong>${msg.senderId}:</strong> ${msg.text} <small>${msg.time}</small>`;
+            chatBox.appendChild(div);
         }
 
-        async function fetchMessages() {
-            try {
-                const res = await fetch(`/api/messages?room=${room}`);
-                const data = await res.json();
-                
-                // Jika server kosong, bersihkan layar
-                if (data.length === 0) {
-                    document.getElementById('chat-container').innerHTML = '';
-                    renderedIds.clear();
-                    return;
-                }
-                // Jika sinkronisasi tidak pas (data server lebih sedikit dari layar)
-                if (data.length < renderedIds.size) {
-                    document.getElementById('chat-container').innerHTML = '';
-                    renderedIds.clear();
-                }
-                data.forEach(m => append(m));
-            } catch (e) {}
+        function scrollToBottom() {
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
-
-        async function updateStatus() { try { const res = await fetch('/api/heartbeat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: myId, room }) }); const data = await res.json(); document.getElementById('status-label').innerText = `${data.onlineCount} Online`; } catch (e) {} }
-
-        async function clearChat() {
-            if (confirm("Hapus semua chat?")) {
-                await fetch(`/api/messages?room=${room}`, { method: 'DELETE' });
-                document.getElementById('chat-container').innerHTML = '';
-                renderedIds.clear();
-            }
-        }
-
-        function initApp() { document.getElementById('room-name').innerText = room; fetchMessages(); setInterval(fetchMessages, 500); setInterval(updateStatus, 5000); }
-
-        // VOICE LOGIC
-        async function handleVoiceNote() {
-            const btn = document.getElementById('mic-btn');
-            if (!isRecording) {
-                try {
-                    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(s); audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => { const b = new Blob(audioChunks, { type: 'audio/webm' }); const r = new FileReader(); r.readAsDataURL(b); r.onloadend = () => sendData(null, null, r.result); };
-                    mediaRecorder.start(); isRecording = true; btn.innerHTML = '⏺'; btn.style.background = "red";
-                } catch(e) { alert("Mic ditolak!"); }
-            } else {
-                mediaRecorder.stop(); isRecording = false;
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
-                btn.style.background = "var(--wa-teal-light)";
-            }
-        }
-        document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleSend(); });
     </script>
 </body>
 </html>
-
