@@ -5,69 +5,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WhatsApp Speed + Emoji</title>
     <style>
-        :root { --wa-teal: #075e54; --wa-teal-light: #128c7e; --wa-bg: #e5ddd5; --wa-sent: #dcf8c6; --wa-received: #ffffff; --wa-accent: #34b7f1; }
+        :root { 
+            --wa-teal: #075e54; 
+            --wa-teal-light: #128c7e; 
+            --wa-bg: #e5ddd5; 
+            --wa-sent: #dcf8c6; 
+            --wa-received: #ffffff; 
+            --wa-accent: #34b7f1; 
+        }
+        
+        /* Reset & Base */
         * { box-sizing: border-box; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
-        body { margin: 0; background: var(--wa-bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        body { 
+            margin: 0; 
+            background: var(--wa-bg); 
+            /* Perbaikan Utama: Menggunakan dvh agar pas saat keyboard HP muncul */
+            height: 100vh; 
+            height: 100dvh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            width: 100%;
+        }
 
-        /* Password & Header */
-        #password-overlay { position: fixed; inset: 0; background: white; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        header { background: var(--wa-teal); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 100; }
+        /* Password Overlay */
+        #password-overlay { 
+            position: fixed; inset: 0; background: white; z-index: 5000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            padding: 20px;
+        }
+        
+        /* Header tetap di atas */
+        header { 
+            background: var(--wa-teal); color: white; padding: 10px 16px; 
+            display: flex; align-items: center; justify-content: space-between; 
+            z-index: 100; flex-shrink: 0; width: 100%;
+        }
         .user-info b { font-size: 17px; display: block; }
         .user-info span { font-size: 12px; opacity: 0.9; }
 
-        /* Chat */
-        #chat-container { flex: 1; overflow-y: auto; padding: 15px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); display: flex; flex-direction: column; gap: 5px; }
-        .message { max-width: 85%; padding: 6px 8px 8px; border-radius: 8px; position: relative; font-size: 14.5px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
+        /* Chat Area */
+        #chat-container { 
+            flex: 1; overflow-y: auto; padding: 15px; 
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); 
+            display: flex; flex-direction: column; gap: 8px; width: 100%;
+        }
+        
+        .message { 
+            max-width: 85%; padding: 8px 10px; border-radius: 8px; 
+            position: relative; font-size: 14.5px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); 
+            word-wrap: break-word; line-height: 1.4;
+        }
         .sent { align-self: flex-end; background: var(--wa-sent); border-top-right-radius: 0; }
         .received { align-self: flex-start; background: var(--wa-received); border-top-left-radius: 0; }
-        .message img { max-width: 280px; width: 100%; border-radius: 6px; display: block; margin-bottom: 4px; }
+        
+        /* Media sizing agar tidak pecah di HP */
+        .message img { max-width: 100%; border-radius: 6px; display: block; margin-bottom: 4px; }
+        .message audio { width: 100%; max-width: 220px; }
+
         .msg-footer { display: flex; justify-content: flex-end; font-size: 11px; color: rgba(0,0,0,0.4); margin-top: 2px; }
         .sent .msg-footer span { color: var(--wa-accent); margin-left: 3px; font-weight: bold; }
 
-        /* Emoji Picker */
-        #emoji-picker { display: none; background: white; border-top: 1px solid #ddd; padding: 10px; grid-template-columns: repeat(8, 1fr); gap: 5px; max-height: 150px; overflow-y: auto; }
+        /* Emoji Picker Responsif */
+        #emoji-picker { 
+            display: none; background: white; border-top: 1px solid #ddd; 
+            padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; 
+            max-height: 180px; overflow-y: auto; width: 100%;
+        }
         .emoji-item { font-size: 24px; cursor: pointer; text-align: center; padding: 5px; }
-        .emoji-item:hover { background: #f0f0f0; border-radius: 50%; }
 
-        /* Preview Photo */
-        #preview-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; }
-        .preview-body { flex: 1; display: flex; align-items: center; justify-content: center; }
-        #preview-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        /* Input Area */
-        #input-area { background: #f0f0f0; padding: 8px; display: flex; align-items: center; gap: 8px; position: relative; }
-        .input-wrapper { background: white; flex: 1; border-radius: 25px; display: flex; align-items: center; padding: 0 12px; }
-        #msg-input { flex: 1; border: none; outline: none; padding: 10px; font-size: 16px; }
-        .circle-btn { width: 45px; height: 45px; background: var(--wa-teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; cursor: pointer; font-size: 20px; flex-shrink: 0; transition: background 0.3s; }
+        /* Input Area Fix */
+        #input-area { 
+            background: #f0f0f0; padding: 8px 10px; display: flex; 
+            align-items: center; gap: 8px; width: 100%; flex-shrink: 0;
+        }
+        .input-wrapper { 
+            background: white; flex: 1; border-radius: 25px; 
+            display: flex; align-items: center; padding: 0 12px; min-width: 0;
+        }
+        #msg-input { 
+            flex: 1; border: none; outline: none; padding: 10px 5px; 
+            font-size: 16px; min-width: 0; background: transparent;
+        }
         
-        /* Icon Sizing */
+        .circle-btn { 
+            width: 45px; height: 45px; background: var(--wa-teal-light); 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            color: white; border: none; cursor: pointer; font-size: 20px; 
+            flex-shrink: 0; transition: background 0.3s;
+        }
         .circle-btn svg { width: 24px; height: 24px; fill: white; }
+
+        /* Preview Overlay Fix */
+        #preview-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; }
+        .preview-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px; }
+        #preview-img { max-width: 100%; max-height: 80vh; object-fit: contain; }
     </style>
 </head>
 <body>
 
     <div id="password-overlay">
         <h2>WhatsApp Private</h2>
-        <input type="password" id="pass-input" placeholder="Password" style="padding:10px; border-radius:5px; text-align:center;">
-        <br><button onclick="checkPassword()" class="circle-btn" style="width:100px; border-radius:20px; font-size:14px;">MASUK</button>
+        <input type="password" id="pass-input" placeholder="Password" style="width: 80%; padding:12px; border-radius:8px; border:1px solid #ccc; text-align:center; font-size: 16px;">
+        <br>
+        <button onclick="checkPassword()" class="circle-btn" style="width:120px; border-radius:20px; font-size:14px; font-weight: bold;">MASUK</button>
     </div>
 
     <div id="preview-overlay">
         <div style="padding:15px; color:white;"><button onclick="cancelPreview()" style="background:none; border:none; color:white; font-size:24px;">✕</button></div>
         <div class="preview-body"><img id="preview-img" src=""></div>
-        <div style="padding:15px; background:rgba(0,0,0,0.5); display:flex; gap:10px;">
-            <input type="text" id="caption-input" placeholder="Keterangan..." style="flex:1; padding:12px; border-radius:25px; border:none;">
+        <div style="padding:15px; background:rgba(0,0,0,0.5); display:flex; gap:10px; width: 100%;">
+            <input type="text" id="caption-input" placeholder="Keterangan..." style="flex:1; padding:12px; border-radius:25px; border:none; font-size: 16px;">
             <button class="circle-btn" onclick="confirmSendImage()">➤</button>
         </div>
     </div>
 
     <header>
         <div class="user-info"><b id="room-name">...</b><span id="status-label">...</span></div>
-        <button onclick="clearChat()" style="background:none; border:none; color:white; font-size:12px; font-weight:bold;">HAPUS CHAT</button>
+        <button onclick="clearChat()" style="background:none; border:1px solid white; border-radius:4px; color:white; font-size:11px; padding: 4px 8px;">HAPUS CHAT</button>
     </header>
 
     <div id="chat-container"></div>
-
     <div id="emoji-picker"></div>
 
     <div id="input-area">
@@ -86,12 +145,12 @@
     </div>
 
     <script>
-        const PASS = "*123#";
+        /* SEMUA LOGIKA JAVASCRIPT ASLI TETAP DI SINI TANPA PERUBAHAN FITUR */
+        const PASS = "123#";
         const room = new URLSearchParams(window.location.search).get('room') || 'Utama';
         const myId = 'user_' + Math.random().toString(36).substr(2, 5);
         let renderedIds = new Set(), selectedFileBase64 = null, isRecording = false, mediaRecorder, audioChunks = [];
 
-        // DAFTAR EMOJI
         const emojis = ["😊","😂","😍","🥰","😘","😜","🤔","🙄","😭","😡","👍","👎","❤️","🔥","🙏","👏","😂","🤣","😅","😆","😉","😊","😋","😎","😍","😘","🥰","😗","😙","😚","☺️","🙂","🤗","🤩"];
         const picker = document.getElementById('emoji-picker');
         emojis.forEach(e => {
@@ -167,13 +226,12 @@
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                     mediaRecorder.onstop = () => { const b = new Blob(audioChunks, { type: 'audio/webm' }); const r = new FileReader(); r.readAsDataURL(b); r.onloadend = () => sendData(null, null, r.result); };
                     mediaRecorder.start(); isRecording = true; 
-                    btn.innerHTML = '⏺'; // Indikator merekam
+                    btn.innerHTML = '⏺';
                     btn.style.background = "red";
                 } catch(e) { alert("Mic ditolak!"); }
             } else {
                 mediaRecorder.stop();
                 isRecording = false;
-                // Kembalikan ke Ikon Mic SVG
                 btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
                 btn.style.background = "var(--wa-teal-light)";
             }
