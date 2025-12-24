@@ -2,9 +2,13 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const fs = require('fs');
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
 
+const PORT = process.env.PORT || 3000;
 const DB_FILE = './messages.json';
 
+// Fungsi Database
 function loadMessages() {
     try {
         if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
@@ -24,36 +28,43 @@ app.use(express.static(path.join(__dirname, 'public')));
 let messages = loadMessages();
 let onlineUsers = {}; 
 
+// Socket.io Real-time Logic
+io.on('connection', (socket) => {
+    console.log('User terhubung:', socket.id);
+
+    socket.on('join-room', (room) => {
+        socket.join(room);
+    });
+
+    socket.on('send-chat', (data) => {
+        const newMessage = {
+            room: data.room || 'Utama',
+            text: data.text,
+            image: data.image,
+            audio: data.audio,
+            senderId: data.senderId,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        messages.push(newMessage);
+        if (messages.length > 500) messages.shift();
+        saveMessages(messages);
+
+        // Kirim ke semua orang di room tersebut
+        io.to(data.room).emit('new-message', newMessage);
+    });
+
+    socket.on('disconnect', () => {
+        delete onlineUsers[socket.id];
+    });
+});
+
+// API Tetap dipertahankan untuk load awal
 app.get('/api/messages', (req, res) => {
     const room = req.query.room || 'Utama';
     res.json(messages.filter(m => m.room === room));
 });
 
-app.post('/api/messages', (req, res) => {
-    const { room, text, image, audio, senderId } = req.body;
-    const newMessage = {
-        room: room || 'Utama', text, image, audio, senderId,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    messages.push(newMessage);
-    if (messages.length > 500) messages.shift();
-    saveMessages(messages);
-    res.status(201).json({ status: 'OK' });
+http.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
 });
-
-app.post('/api/heartbeat', (req, res) => {
-    const { userId, room } = req.body;
-    onlineUsers[userId] = { room, lastSeen: Date.now() };
-    const count = Object.values(onlineUsers).filter(u => u.room === room && (Date.now() - u.lastSeen) < 10000).length;
-    res.json({ onlineCount: count });
-});
-
-app.delete('/api/messages', (req, res) => {
-    const room = req.query.room;
-    messages = messages.filter(m => m.room !== room);
-    saveMessages(messages);
-    res.json({ status: 'Deleted' });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));
