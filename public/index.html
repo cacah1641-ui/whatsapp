@@ -1,65 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Chat Real-time</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Pribadi Real-time</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        #chat-box { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        .msg { margin-bottom: 8px; padding: 5px; background: #f1f1f1; border-radius: 5px; }
+        body { font-family: sans-serif; margin: 20px; }
+        #chat-box { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9; border-radius: 8px; }
+        .msg-item { margin-bottom: 10px; padding: 8px; background: white; border-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .time { font-size: 0.7em; color: #888; }
+        .controls { margin-top: 10px; display: flex; gap: 5px; }
+        input { flex: 1; padding: 10px; }
+        button { padding: 10px 20px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 5px; }
     </style>
 </head>
 <body>
+
+    <h2>Chat Room: Utama</h2>
     <div id="chat-box"></div>
-    <input type="text" id="message-input" placeholder="Ketik pesan...">
-    <button onclick="sendMessage()">Kirim</button>
+
+    <div class="controls">
+        <input type="text" id="msgInput" placeholder="Ketik pesan di sini...">
+        <button onclick="send()">Kirim</button>
+    </div>
 
     <script>
         const socket = io();
         const chatBox = document.getElementById('chat-box');
-        const roomName = 'Utama'; // Sesuai default server Anda
-        const myId = 'User_' + Math.floor(Math.random() * 1000);
+        const msgInput = document.getElementById('msgInput');
+        const roomName = 'Utama';
+        const myName = "User_" + Math.floor(Math.random() * 1000);
 
         socket.emit('join-room', roomName);
 
-        // 1. Load chat lama saat pertama kali buka (sekali saja)
+        // 1. Ambil history saat pertama buka
         fetch(`/api/messages?room=${roomName}`)
             .then(res => res.json())
             .then(data => {
-                data.forEach(msg => appendMessage(msg));
+                data.forEach(msg => appendToScreen(msg));
                 scrollToBottom();
             });
 
         // 2. Terima pesan baru via Socket (Real-time)
         socket.on('new-message', (msg) => {
-            appendMessage(msg);
+            appendToScreen(msg);
             scrollToBottom();
         });
 
-        function sendMessage() {
-            const input = document.getElementById('message-input');
-            if(!input.value) return;
-
+        function send() {
+            if (!msgInput.value.trim()) return;
+            
             const data = {
                 room: roomName,
-                text: input.value,
-                senderId: myId
+                text: msgInput.value,
+                senderId: myName
             };
 
             socket.emit('send-chat', data);
-            input.value = '';
+            msgInput.value = '';
         }
 
-        function appendMessage(msg) {
+        function appendToScreen(msg) {
             const div = document.createElement('div');
-            div.className = 'msg';
-            div.innerHTML = `<strong>${msg.senderId}:</strong> ${msg.text} <small>${msg.time}</small>`;
+            div.className = 'msg-item';
+            div.innerHTML = `<strong>${msg.senderId}</strong>: ${msg.text} <br> <span class="time">${msg.time}</span>`;
             chatBox.appendChild(div);
         }
 
         function scrollToBottom() {
             chatBox.scrollTop = chatBox.scrollHeight;
         }
+
+        // Kirim dengan tombol Enter
+        msgInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") send();
+        });
     </script>
 </body>
 </html>
