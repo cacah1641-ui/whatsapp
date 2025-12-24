@@ -8,7 +8,7 @@ const io = require('socket.io')(http);
 const PORT = process.env.PORT || 3000;
 const DB_FILE = './messages.json';
 
-// Fungsi Database
+// Fungsi Database (Simpan ke File)
 function loadMessages() {
     try {
         if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
@@ -26,11 +26,10 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 let messages = loadMessages();
-let onlineUsers = {}; 
 
-// Socket.io Real-time Logic
+// Logika Socket.io (Real-time)
 io.on('connection', (socket) => {
-    console.log('User terhubung:', socket.id);
+    console.log('User terhubung');
 
     socket.on('join-room', (room) => {
         socket.join(room);
@@ -40,8 +39,6 @@ io.on('connection', (socket) => {
         const newMessage = {
             room: data.room || 'Utama',
             text: data.text,
-            image: data.image,
-            audio: data.audio,
             senderId: data.senderId,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -50,21 +47,18 @@ io.on('connection', (socket) => {
         if (messages.length > 500) messages.shift();
         saveMessages(messages);
 
-        // Kirim ke semua orang di room tersebut
+        // Kirim ke semua orang di room secara instan
         io.to(data.room).emit('new-message', newMessage);
-    });
-
-    socket.on('disconnect', () => {
-        delete onlineUsers[socket.id];
     });
 });
 
-// API Tetap dipertahankan untuk load awal
+// API untuk Load Chat Awal
 app.get('/api/messages', (req, res) => {
     const room = req.query.room || 'Utama';
     res.json(messages.filter(m => m.room === room));
 });
 
+// Jalankan Server
 http.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
