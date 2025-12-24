@@ -3,20 +3,19 @@ const app = express();
 const path = require('path');
 const fs = require('fs');
 
-const PORT = process.env.PORT || 3000;
 const DB_FILE = './messages.json';
 
 function loadMessages() {
     try {
         if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    } catch (e) { console.log("Database baru dibuat."); }
+    } catch (e) { console.log("Database baru..."); }
     return [];
 }
 
 function saveMessages(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    } catch (e) { console.error("Gagal menyimpan!"); }
+    } catch (e) { console.error("Gagal simpan!"); }
 }
 
 app.use(express.json({ limit: '50mb' }));
@@ -31,10 +30,9 @@ app.get('/api/messages', (req, res) => {
 });
 
 app.post('/api/messages', (req, res) => {
-    const { room, text, image, audio, senderId } = req.body;
+    const { room, text, image, audio, senderId, reply } = req.body;
     const newMessage = {
-        id: Date.now() + Math.random().toString(36).substr(2, 5), // ID Unik
-        room: room || 'Utama', text, image, audio, senderId,
+        room: room || 'Utama', text, image, audio, senderId, reply,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     messages.push(newMessage);
@@ -43,18 +41,18 @@ app.post('/api/messages', (req, res) => {
     res.status(201).json({ status: 'OK' });
 });
 
+app.post('/api/heartbeat', (req, res) => {
+    const { userId, room } = req.body;
+    onlineUsers[userId] = { room, lastSeen: Date.now() };
+    const count = Object.values(onlineUsers).filter(u => u.room === room && (Date.now() - u.lastSeen) < 10000).length;
+    res.json({ onlineCount: count });
+});
+
 app.delete('/api/messages', (req, res) => {
-    const room = req.query.room || 'Utama';
-    messages = messages.filter(m => m.room !== room);
+    messages = messages.filter(m => m.room !== req.query.room);
     saveMessages(messages);
     res.json({ status: 'Deleted' });
 });
 
-app.post('/api/heartbeat', (req, res) => {
-    const { userId, room } = req.body;
-    onlineUsers[userId] = { room, lastSeen: Date.now() };
-    const count = Object.values(onlineUsers).filter(u => u.room === room && Date.now() - u.lastSeen < 10000).length;
-    res.json({ onlineCount: count });
-});
-
-app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server aktif di port ${PORT}`));
