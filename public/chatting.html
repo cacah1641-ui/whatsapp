@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WhatsApp Clone Multi-User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { background-color: #f0f2f5; height: 100dvh; width: 100vw; margin: 0; overflow: hidden; display: flex; justify-content: center; font-family: sans-serif; }
+        #chatContainer { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: rgba(229, 221, 213, 0.9); background-blend-mode: overlay; }
+        .bubble { padding: 6px 10px; border-radius: 8px; margin-bottom: 4px; max-width: 85%; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); position: relative; font-size: 15px; word-wrap: break-word; }
+        .mine { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 0; }
+        .theirs { background: #ffffff; align-self: flex-start; border-top-left-radius: 0; }
+        .recording-active { background-color: #ef4444 !important; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .modal-full { position: fixed; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
+        #localVideo { width: 100px; height: 150px; position: absolute; top: 20px; right: 20px; border-radius: 8px; border: 2px solid white; object-fit: cover; }
+        #lockScreen { position: fixed; inset: 0; background: #008069; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        #imgPreviewModal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; display: none; flex-direction: column; }
+    </style>
+</head>
+<body class="bg-gray-200">
+    <div id="lockScreen">
+        <div class="mb-6 text-center">
+            <svg class="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <h1 class="text-2xl font-bold">WhatsApp Login</h1>
+            <p class="opacity-80">Masukkan nama Anda untuk bergabung</p>
+        </div>
+        <div class="flex flex-col gap-3 w-64">
+            <input type="text" id="userInput" placeholder="Nama Anda" class="p-3 rounded-lg text-black text-center outline-none">
+            <button onclick="masukChat()" class="bg-white text-[#008069] font-bold p-3 rounded-lg shadow-lg active:scale-95 transition-transform uppercase">Masuk</button>
+        </div>
+    </div>
+
+    <div id="imgPreviewModal">
+        <div class="p-4 flex justify-between items-center text-white">
+            <button onclick="closePreview()" class="p-2">Batal</button>
+            <span class="font-bold">Preview Gambar</span>
+            <div class="w-10"></div>
+        </div>
+        <div class="flex-1 flex items-center justify-center p-4">
+            <img id="previewDisplay" class="max-w-full max-h-full object-contain">
+        </div>
+        <div class="p-6 flex justify-center">
+            <button onclick="confirmSendImage()" class="bg-[#00a884] text-white px-8 py-3 rounded-full font-bold shadow-lg flex items-center gap-2">
+                KIRIM <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="w-full max-w-md bg-white flex flex-col h-full shadow-xl relative">
+        <div class="bg-[#008069] text-white p-3 flex items-center justify-between shadow-md z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gray-300 overflow-hidden border border-white/20">
+                    <img id="headerAvatar" src="https://ui-avatars.com/api/?name=Group&background=random" alt="Avatar">
+                </div>
+                <div>
+                    <h2 class="font-bold text-lg leading-tight" id="chatTitle">Grup Chat</h2>
+                    <div class="flex items-center gap-1.5">
+                        <div id="statusDot" class="w-2 h-2 rounded-full bg-green-400"></div>
+                        <span id="status" class="text-xs opacity-90">0 User Online</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-5 items-center pr-2">
+                <button onclick="panggil('video')" class="hover:opacity-70"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg></button>
+                <button onclick="panggil('voice')" class="hover:opacity-70"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1.02 1.02 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.2a.99.99 0 00.24-1.01A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg></button>
+                <button onclick="clearChat()" class="hover:opacity-70"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+            </div>
+        </div>
+
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-4 flex flex-col gap-1 pb-20">
+            <div id="chatBox" class="flex flex-col gap-1"></div>
+        </div>
+
+        <div class="absolute bottom-0 w-full p-2 flex items-end gap-2 bg-transparent z-10">
+            <div class="flex-1 bg-white rounded-[24px] shadow-sm flex items-end p-1.5 min-h-[48px]">
+                <button onclick="toggleEmoji()" class="p-2 text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </button>
+                <textarea id="msgInp" placeholder="Ketik pesan" rows="1" class="flex-1 max-h-32 p-2 outline-none resize-none text-[16px] bg-transparent leading-tight" oninput="updateInputUI()"></textarea>
+                
+                <div id="extraIcons" class="flex items-center">
+                    <label for="fileInp" class="p-2 text-gray-500 cursor-pointer hover:text-gray-700">
+                        <svg class="w-6 h-6 rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                    </label>
+                    <label for="camInp" class="p-2 text-gray-500 cursor-pointer hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12a3 3 0 100-6 3 3 0 000 6z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                    </label>
+                </div>
+                <input type="file" id="fileInp" class="hidden" onchange="handleFile(this)">
+                <input type="file" id="camInp" class="hidden" accept="image/*" capture="environment" onchange="handleFile(this)">
+            </div>
+            
+            <button id="sendBtn" onclick="send()" class="hidden w-12 h-12 bg-[#00a884] rounded-full items-center justify-center text-white shadow-md">
+                <svg class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+            <button id="micBtn" onmousedown="startVN()" onmouseup="stopVN()" ontouchstart="startVN()" ontouchend="stopVN()" class="w-12 h-12 bg-[#00a884] rounded-full flex items-center justify-center text-white shadow-md">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            </button>
+        </div>
+        <div id="emojiPanel" class="absolute bottom-16 left-2 bg-white shadow-xl rounded-lg grid grid-cols-6 p-2 gap-2 z-20" style="display:none"></div>
+    </div>
+
+    <div id="callModal" class="modal-full">
+        <div class="absolute top-10 text-center">
+            <h2 id="callTitle" class="text-2xl font-bold">Menghubungi...</h2>
+            <p id="callTargetName" class="text-lg">User Lain</p>
+        </div>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+        <div class="absolute bottom-10 flex gap-10">
+            <button id="btnTerima" onclick="terimaPanggilan()" class="hidden w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8" fill="white" viewBox="0 0 24 24"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1.02 1.02 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.2a.99.99 0 00.24-1.01A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
+            </button>
+            <button onclick="akhiriPanggilan()" class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8" fill="white" viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.965.965 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let NAMA_SAYA = "";
+        const inp = document.getElementById('msgInp');
+        const chatBox = document.getElementById('chatBox');
+        const sendBtn = document.getElementById('sendBtn');
+        const micBtn = document.getElementById('micBtn');
+        const extraIcons = document.getElementById('extraIcons');
+
+        let pendingImage = null;
+
+        function masukChat() {
+            const nama = document.getElementById('userInput').value.trim();
+            if(nama) {
+                NAMA_SAYA = nama;
+                document.getElementById('lockScreen').style.display = 'none';
+                socket.emit('register', NAMA_SAYA);
+                fetchMsg();
+            } else { alert("Masukkan nama!"); }
+        }
+
+        function updateInputUI() {
+            const hasText = inp.value.trim().length > 0;
+            sendBtn.style.display = hasText ? 'flex' : 'none';
+            micBtn.style.display = hasText ? 'none' : 'flex';
+            extraIcons.style.display = hasText ? 'none' : 'flex';
+            inp.style.height = 'auto';
+            inp.style.height = inp.scrollHeight + 'px';
+        }
+
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    pendingImage = e.target.result;
+                    document.getElementById('previewDisplay').src = pendingImage;
+                    document.getElementById('imgPreviewModal').style.display = 'flex';
+                };
+                reader.readAsDataURL(input.files[0]);
+                input.value = "";
+            }
+        }
+
+        function closePreview() {
+            document.getElementById('imgPreviewModal').style.display = 'none';
+            pendingImage = null;
+        }
+
+        async function confirmSendImage() {
+            if (!pendingImage) return;
+            await fetch('/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sender: NAMA_SAYA, type: 'image', content: pendingImage })
+            });
+            closePreview();
+            fetchMsg();
+        }
+
+        async function fetchMsg() {
+            const res = await fetch('/api/messages');
+            const data = await res.json();
+            chatBox.innerHTML = "";
+            data.forEach(m => {
+                const isMine = m.sender === NAMA_SAYA;
+                const div = document.createElement('div');
+                div.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
+                
+                // Add Sender Name for Group Context
+                if(!isMine) {
+                    const nameTag = document.createElement('div');
+                    nameTag.className = "text-[11px] font-bold text-blue-600 mb-0.5";
+                    nameTag.innerText = m.sender;
+                    div.appendChild(nameTag);
+                }
+
+                const contentDiv = document.createElement('div');
+                if(m.type === 'text') contentDiv.innerText = m.content;
+                else if(m.type === 'image') contentDiv.innerHTML = `<img src="${m.content}" class="rounded-lg max-w-full">`;
+                else if(m.type === 'audio') contentDiv.innerHTML = `<audio controls class="w-48"><source src="${m.content}" type="audio/webm"></audio>`;
+                div.appendChild(contentDiv);
+                
+                // Time and Double Checkmark
+                const footer = document.createElement('div');
+                footer.className = "flex items-center justify-end gap-1 mt-1";
+                
+                const time = document.createElement('span');
+                time.className = "text-[10px] text-gray-500";
+                time.innerText = m.time;
+                
+                footer.appendChild(time);
+                
+                if(isMine) {
+                    const check = document.createElement('span');
+                    check.className = "text-blue-500";
+                    check.innerHTML = `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.31 6.5c-.39-.39-1.02-.39-1.41 0L9 18.41l-5.9-5.9c-.39-.39-1.02-.39-1.41 0s-.39 1.02 0 1.41l6.6 6.6c.39.39 1.02.39 1.41 0L22.31 7.91c.39-.39.39-1.02 0-1.41zm-6.31 0l-1.41-1.41L9 10.76l1.41 1.41L16 6.5z"/></svg>`;
+                    footer.appendChild(check);
+                }
+                
+                div.appendChild(footer);
+                chatBox.appendChild(div);
+            });
+            document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+        }
+
+        async function send() {
+            const val = inp.value.trim();
+            if(!val) return;
+            await fetch('/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sender: NAMA_SAYA, type: 'text', content: val })
+            });
+            inp.value = "";
+            updateInputUI();
+            fetchMsg();
+        }
+
+        socket.on('updateMessages', fetchMsg);
+
+        // --- Audio ---
+        let mediaRecorder, audioChunks = [];
+        async function startVN() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    await fetch('/api/messages', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sender: NAMA_SAYA, type: 'audio', content: reader.result })
+                    });
+                    fetchMsg();
+                };
+                reader.readAsDataURL(blob);
+                audioChunks = [];
+            };
+            mediaRecorder.start();
+            micBtn.classList.add('recording-active');
+        }
+        function stopVN() { if(mediaRecorder?.state !== 'inactive') { mediaRecorder.stop(); micBtn.classList.remove('recording-active'); } }
+
+        function toggleEmoji() {
+            const p = document.getElementById('emojiPanel');
+            p.style.display = p.style.display === "none" ? "grid" : "none";
+            if(p.innerHTML==="") ["😀","😂","😊","😍","🤔","👍","🙏","🔥","❤️","✨","🤣","😭","🙌"].forEach(e => {
+                const b = document.createElement('button'); b.innerText = e; b.className="text-2xl p-2 active:bg-gray-100 rounded-lg";
+                b.onclick = () => { inp.value += e; updateInputUI(); p.style.display = "none"; inp.focus(); }; 
+                p.appendChild(b);
+            });
+        }
+
+        async function clearChat() { if(confirm("Hapus semua chat?")) { await fetch('/api/delete-chat', {method:'POST'}); fetchMsg(); } }
+        
+        // --- Counter Online ---
+        setInterval(async () => {
+            if(!NAMA_SAYA) return;
+            const res = await fetch('/api/heartbeat', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body: JSON.stringify({ userId: NAMA_SAYA }) 
+            });
+            const data = await res.json();
+            const count = data.usersOnline.length;
+            document.getElementById('status').innerText = `${count} User Online`;
+        }, 3000);
+
+        // --- Calling System (Broadcast-style) ---
+        let pc, localStream;
+        async function panggil(tipe) {
+            document.getElementById('callModal').style.display = 'flex';
+            document.getElementById('callTitle').innerText = "Memulai Panggilan...";
+            localStream = await navigator.mediaDevices.getUserMedia({ video: tipe==='video', audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+            pc = new RTCPeerConnection();
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+            pc.onicecandidate = e => e.candidate && socket.emit('ice-candidate', { candidate: e.candidate });
+            pc.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('panggilanMasuk', { from: NAMA_SAYA, offer, tipe });
+        }
+
+        socket.on('panggilanMasuk', async (data) => {
+            if(data.from === NAMA_SAYA) return;
+            document.getElementById('callModal').style.display = 'flex';
+            document.getElementById('callTitle').innerText = `Panggilan dari ${data.from}`;
+            document.getElementById('btnTerima').classList.remove('hidden');
+            window.panggilanData = data;
+        });
+
+        async function terimaPanggilan() {
+            const data = window.panggilanData;
+            document.getElementById('btnTerima').classList.add('hidden');
+            localStream = await navigator.mediaDevices.getUserMedia({ video: data.tipe==='video', audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+            pc = new RTCPeerConnection();
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+            pc.onicecandidate = e => e.candidate && socket.emit('ice-candidate', { to: data.from, candidate: e.candidate });
+            pc.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
+            await pc.setRemoteDescription(data.offer);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('panggilanDiterima', { to: data.from, answer });
+        }
+
+        socket.on('panggilanDiterima', async (data) => {
+            await pc.setRemoteDescription(data.answer);
+            document.getElementById('callTitle').innerText = "Terhubung";
+        });
+
+        socket.on('ice-candidate', async (data) => { if(pc) await pc.addIceCandidate(data.candidate); });
+
+        function akhiriPanggilan() {
+            if(pc) pc.close();
+            if(localStream) localStream.getTracks().forEach(t => t.stop());
+            document.getElementById('callModal').style.display = 'none';
+            socket.emit('matikan', { from: NAMA_SAYA });
+        }
+        socket.on('panggilanDimatikan', () => {
+            if(pc) pc.close();
+            document.getElementById('callModal').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
